@@ -293,7 +293,9 @@ class ConsoleFormatter(logging.Formatter):
     def colorize_levelname(record, token):
         # Colorize on levelno instead to handle future names (will show up with different level name but same
         # color as next highest level
-        if record.levelno <= logging.DEBUG:
+        if record.levelno < logging.DEBUG:
+            return ConsoleFormatter.term_256_color(token, 'yellow4', 'grey11')
+        if record.levelno == logging.DEBUG:
             return ConsoleFormatter.term_256_color(token, 'darkgreen', 'grey11')
         elif record.levelno <= logging.INFO:
             return ConsoleFormatter.term_256_color(token, 'navy', )
@@ -322,6 +324,10 @@ class ConsoleFormatter(logging.Formatter):
         btes = record.name.encode(encoding='UTF-8')
         return ConsoleFormatter.term_256_color(token, ConsoleFormatter.COLOR_TABLE[sum(btes)% 16], 'grey11')
 
+    @staticmethod
+    def colorize_message_params(message, token):
+        pass
+
     def format(self, record):
         """
         This got messy quickly.
@@ -335,9 +341,9 @@ class ConsoleFormatter(logging.Formatter):
         format escapes just outside of the formatted field. That means a little more parsing work
         to make this formatter "magic" with known format string constants like "name" and "levelname"
         """
-        regex = r'(?P<token>%\(\w+\)[#0 \-\+]*[0-9\.]*[diouxXeEfFgGcrsa])'
+        regex = r'(?P<token>%(\(\w+\))*[#0 \-\+]*[0-9\.]*[diouxXeEfFgGcrsa])'
         dynamic_format = self.fmt
-        tokens = re.findall(regex, dynamic_format)
+        tokens = map(lambda t: t[0], re.findall(regex, dynamic_format))
         for token in tokens:
             if token.find("levelname") > 0:
                 dynamic_format = dynamic_format.replace(token, self.colorize_levelname(record, token))
@@ -361,27 +367,77 @@ formatters:
 handlers:
   console:
     class: logging.StreamHandler
-    level: DEBUG
+    level: TRACE
     formatter: colored_console
     stream: ext://sys.stdout
   file:
     class: logging.FileHandler
-    level: DEBUG
+    level: TRACE
     filename: ../logs/log
-loggers:
-  simpleExample:
-    level: DEBUG
-    handlers: [console]
-    propagate: no
 root:
-  level: DEBUG
+  level: TRACE
   handlers: [console,file]
 """
+
+
+# Taken from https://stackoverflow.com/questions/2183233/how-to-add-a-custom-loglevel-to-pythons-logging-facility/35804945#35804945
+def addLoggingLevel(levelName, levelNum, methodName=None):
+    """
+    Comprehensively adds a new logging level to the `logging` module and the
+    currently configured logging class.
+
+    `levelName` becomes an attribute of the `logging` module with the value
+    `levelNum`. `methodName` becomes a convenience method for both `logging`
+    itself and the class returned by `logging.getLoggerClass()` (usually just
+    `logging.Logger`). If `methodName` is not specified, `levelName.lower()` is
+    used.
+
+    To avoid accidental clobberings of existing attributes, this method will
+    raise an `AttributeError` if the level name is already an attribute of the
+    `logging` module or if the method name is already present 
+
+    Example
+    -------
+    >>> addLoggingLevel('TRACE', logging.DEBUG - 5)
+    >>> logging.getLogger(__name__).setLevel("TRACE")
+    >>> logging.getLogger(__name__).trace('that worked')
+    >>> logging.trace('so did this')
+    >>> logging.TRACE
+    5
+
+    """
+    if not methodName:
+        methodName = levelName.lower()
+
+    if hasattr(logging, levelName):
+       raise AttributeError('{} already defined in logging module'.format(levelName))
+    if hasattr(logging, methodName):
+       raise AttributeError('{} already defined in logging module'.format(methodName))
+    if hasattr(logging.getLoggerClass(), methodName):
+       raise AttributeError('{} already defined in logger class'.format(methodName))
+
+    # This method was inspired by the answers to Stack Overflow post
+    # http://stackoverflow.com/q/2183233/2988730, especially
+    # http://stackoverflow.com/a/13638084/2988730
+    def logForLevel(self, message, *args, **kwargs):
+        if self.isEnabledFor(levelNum):
+            self._log(levelNum, message, args, **kwargs)
+    def logToRoot(message, *args, **kwargs):
+        logging.log(levelNum, message, *args, **kwargs)
+
+    logging.addLevelName(levelNum, levelName)
+    setattr(logging, levelName, levelNum)
+    setattr(logging.getLoggerClass(), methodName, logForLevel)
+    setattr(logging, methodName, logToRoot)
+
+addLoggingLevel("TRACE", logging.DEBUG - 5)
+
 
 logging.config.dictConfig(yaml.load(logConfig, Loader=yaml.FullLoader))
 
 # Test out logging level printing / report to terminal what they look like
 TEST_LOG = logging.getLogger("base.TEST_LOG")
+TEST_LOG.trace("This is a TRACE message")
 TEST_LOG.debug("This is a DEBUG message")
 TEST_LOG.info("This is a INFO message")
 TEST_LOG.warn("This is a WARN message")

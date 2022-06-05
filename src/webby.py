@@ -7,7 +7,7 @@ import uri_open
 import uri_goto
 import smappen
 
-CLOSE_ON_EXIT = True
+CLOSE_ON_EXIT = False
 LOG = logging.getLogger(__name__)
 
 
@@ -35,18 +35,45 @@ class CommandCollection:
 
         TODO: delegate to factories to decide if they can handle a set of arguments (can we use argparse for this proactively somehow?)
         """
+
         current_factory = None
         commands_buffer = []
+
+        def flush():
+            nonlocal current_factory, commands_buffer
+            if current_factory:
+                LOG.trace("Aggregating args for last command %s: %s", current_factory.name, commands_buffer)
+                # "Flush" current command, which is just-now-determined-to-be "last" command
+                # as we've found a new command name. That is, send the aggregated arguments
+                # to a new instance of the just-now-"last" command before clearing for the
+                # just-now "current" command
+                command_instance = current_factory(commands_buffer)
+                LOG.debug("Command: %s", command_instance)
+                self._commands.append(command_instance)
+                # Set up the next command factory by clearing buffers
+                current_factory = None
+                commands_buffer = []
+
         for token in argument_str:
+            token_is_command = False
             for c in self._command_factories:
                 if c.name == token:
-                    LOG.debug("Found new command " + token)
-                    print("Found new command " + token)
-                    # "Flush" current command, that is, build it with the tokens so far.
-                    # Set up the next command factory
+                    token_is_command = True
+                    LOG.trace("Found new command %s", c.name)
+                    flush()
                     current_factory = c
-                    commands_buffer = []
                     next
+            # We didn't register as a command name, it must be an argument.
+            if not token_is_command:
+                commands_buffer.append(token)
+        # If there is a current factory (typical for the last factory we were building) there won't be a "next"
+        # command name to trigger aggregation and building, so just flush manually at the end.
+        flush()
+
+    def execute(self):
+        for c in self._commands:
+            c.execute()
+
 
 
 print(sys.argv)
@@ -55,6 +82,8 @@ cc.register_command(uri_open.Open)
 cc.register_command(uri_goto.Goto)
 
 cc.build_commands(sys.argv[1:])
+
+cc.execute()
 
 if CLOSE_ON_EXIT:
     base.driver.close()

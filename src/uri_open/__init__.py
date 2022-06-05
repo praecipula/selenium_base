@@ -7,24 +7,34 @@ This shows what a basic command-based DSL will enable us to do
 Simplest command: open a URL
 """
 
-# Define our parser
+LOG = logging.getLogger(__name__)
 
+class CommandParser(argparse.ArgumentParser):
+
+    class ParseError(Exception):
+        pass
+
+    def error(self, message):
+        LOG.critical(message)
+        raise CommandParser.ParseError(message)
 
 class Open:
     name = "open"
 
-    parser = argparse.ArgumentParser(description='Multiple subparsers')
-    parser.add_argument("uri", metavar='U', type=str, nargs='+', help = "A URL to go to")
+    parser = CommandParser(prog = name, description=f'{name} command')
+    parser.add_argument("uri", metavar='URI', type=str)
 
-    def __init__(self, command_string):
-        self._command_string = command_string
-        args = Open.parser.parse_args(command_string)
-        print(args)
+    def __init__(self, command_args):
+        self._argstr = command_args
+        self._args = Open.parser.parse_args(command_args)
         
 
-    def execute(args):
-        logger.info("Opening url in a new tab" + str(args))
-        driver.get(args['uri'])
+    def execute(self):
+        LOG.info("Opening new tab at " + self._args.uri)
+        driver.get(self._args.uri)
         return True
+
+    def __str__(self):
+        return f"{self.__class__.name}: {self._args}"
 
 
