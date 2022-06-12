@@ -11,6 +11,8 @@ driver = webdriver.Firefox()
 # set implicit wait time
 driver.implicitly_wait(10) # seconds
 
+from selenium.webdriver.common.action_chains import ActionChains
+
 ##  LOGGING SETUP
 class ConsoleFormatter(logging.Formatter):
 

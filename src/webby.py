@@ -80,10 +80,12 @@ print(sys.argv)
 cc = CommandCollection()
 cc.register_command(uri_open.Open)
 cc.register_command(uri_goto.Goto)
+cc.register_command(smappen.SmappenEnsureLogin)
 
 cc.build_commands(sys.argv[1:])
 
 cc.execute()
 
+LOG.info("Complete!")
 if CLOSE_ON_EXIT:
     base.driver.close()
