@@ -1,10 +1,9 @@
 import logging.config
 import yaml
 import re
-
-from selenium import webdriver 
  
 ## SELENIUM SETUP
+from selenium import webdriver 
 # create webdriver object 
 driver = webdriver.Firefox() 
     
@@ -438,10 +437,66 @@ addLoggingLevel("TRACE", logging.DEBUG - 5)
 logging.config.dictConfig(yaml.load(logConfig, Loader=yaml.FullLoader))
 
 # Test out logging level printing / report to terminal what they look like
-TEST_LOG = logging.getLogger("base.TEST_LOG")
-TEST_LOG.trace("This is a TRACE message")
-TEST_LOG.debug("This is a DEBUG message")
-TEST_LOG.info("This is a INFO message")
-TEST_LOG.warn("This is a WARN message")
-TEST_LOG.error("This is a ERROR message")
-TEST_LOG.critical("This is a CRITICAL message")
+LOG = logging.getLogger("base.LOG")
+LOG.trace("This is a TRACE message")
+LOG.debug("This is a DEBUG message")
+LOG.info("This is a INFO message")
+LOG.warn("This is a WARN message")
+LOG.error("This is a ERROR message")
+LOG.critical("This is a CRITICAL message")
+
+# Add an assert
+ASSERT_LOG= logging.getLogger("ASSERT")
+# This can be called with no arguments to log and trigger a debugger
+def ASSERT(condition_that_should_be_true=False, message="Unspecified", debug_on_fail=True):
+    if condition_that_should_be_true:
+        return True
+    LOG.critical(f"Failed assert: {message}", message)
+    if debug_on_fail:
+        import pdb; pdb.set_trace()
+    return condition_that_should_be_true # False by this point - it's not in fact true.
+
+
+
+# BASE CLASSES AND FUNCTIONALITY
+import argparse
+class CommandParser(argparse.ArgumentParser):
+
+    class ParseError(Exception):
+        pass
+
+    # TODO: bring this into an ASSERT when I'm sure that handles stack traces usefully.
+    def error(self, message):
+        LOG.critical(message)
+        raise CommandParser.ParseError(message)
+
+class AutomationCommandBase:
+    name = "INHERITORS_SHOULD_OVERRIDE"
+
+    parser = None
+    #Override using argparse like this
+    #parser = CommandParser(prog = name, description=f'{name} command')
+    #parser.add_argument("uri", metavar='URI', type=str)
+
+
+    def __init__(self, command_args):
+        self._argstr = command_args
+        self._args = self.__class__.parser.parse_args(command_args)
+        
+    def __str__(self):
+        return f"{self.__class__.name}: {self._args}"
+
+    @staticmethod
+    def element_by_xpath(xpath):
+        elements = AutomationCommandBase.elements_by_xpath(xpath)
+        if not ASSERT(len(elements) == 1, f"Found more than one element with xpath {xpath}"):
+            return None
+        return elements[0]
+
+    @staticmethod
+    def elements_by_xpath(xpath):
+        elements = driver.find_elements_by_xpath(xpath)
+        if len(elements) == 0:
+            LOG.info("We didn't find any element")
+            return None
+        return elements

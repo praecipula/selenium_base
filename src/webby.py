@@ -18,7 +18,6 @@ class CommandCollection:
     """
     def __init__(self):
         self._command_factories = []
-        self._commands = []
 
     def register_command(self, command_factory):
         """
@@ -36,23 +35,24 @@ class CommandCollection:
         TODO: delegate to factories to decide if they can handle a set of arguments (can we use argparse for this proactively somehow?)
         """
 
+        self._commands = []
         current_factory = None
-        commands_buffer = []
+        arguments_buffer = []
 
         def flush():
-            nonlocal current_factory, commands_buffer
+            nonlocal current_factory, arguments_buffer
             if current_factory:
-                LOG.trace("Aggregating args for last command %s: %s", current_factory.name, commands_buffer)
+                LOG.trace("Aggregating args for last command %s: %s", current_factory.name, arguments_buffer)
                 # "Flush" current command, which is just-now-determined-to-be "last" command
                 # as we've found a new command name. That is, send the aggregated arguments
                 # to a new instance of the just-now-"last" command before clearing for the
                 # just-now "current" command
-                command_instance = current_factory(commands_buffer)
+                command_instance = current_factory(arguments_buffer)
                 LOG.debug("Command: %s", command_instance)
                 self._commands.append(command_instance)
                 # Set up the next command factory by clearing buffers
                 current_factory = None
-                commands_buffer = []
+                arguments_buffer = []
 
         for token in argument_str:
             token_is_command = False
@@ -65,7 +65,8 @@ class CommandCollection:
                     next
             # We didn't register as a command name, it must be an argument.
             if not token_is_command:
-                commands_buffer.append(token)
+                LOG.trace("Not a command, assuming an argument %s", token)
+                arguments_buffer.append(token)
         # If there is a current factory (typical for the last factory we were building) there won't be a "next"
         # command name to trigger aggregation and building, so just flush manually at the end.
         flush()
@@ -81,6 +82,7 @@ cc = CommandCollection()
 cc.register_command(uri_open.Open)
 cc.register_command(uri_goto.Goto)
 cc.register_command(smappen.SmappenEnsureLogin)
+cc.register_command(smappen.SmappenSearchForLocation)
 
 cc.build_commands(sys.argv[1:])
 
