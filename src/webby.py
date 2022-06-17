@@ -6,6 +6,7 @@ import sys
 import uri_open
 import uri_goto
 import smappen
+import smappen.binary_search_for_latlon
 
 CLOSE_ON_EXIT = False
 LOG = logging.getLogger(__name__)
@@ -73,7 +74,11 @@ class CommandCollection:
 
     def execute(self):
         for c in self._commands:
-            c.execute()
+            success = c.execute()
+            if not success:
+                LOG.warning(f"Command {c} returned false from execution; should we stop? We currently don't")
+        LOG.info("Complete!")
+        return True
 
 
 
@@ -83,11 +88,13 @@ cc.register_command(uri_open.Open)
 cc.register_command(uri_goto.Goto)
 cc.register_command(smappen.SmappenEnsureLogin)
 cc.register_command(smappen.SmappenSearchForLocation)
+cc.register_command(smappen.binary_search_for_latlon.SmappenSearchForLatLon)
+cc.register_command(smappen.binary_search_for_latlon.SmappenSearchForLatLon)
+cc.register_command(smappen.binary_search_for_latlon.SmappenSearchForGoogleMapsPin)
 
 cc.build_commands(sys.argv[1:])
 
 cc.execute()
 
-LOG.info("Complete!")
 if CLOSE_ON_EXIT:
     base.driver.close()

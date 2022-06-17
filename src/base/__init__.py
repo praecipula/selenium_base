@@ -451,7 +451,7 @@ ASSERT_LOG= logging.getLogger("ASSERT")
 def ASSERT(condition_that_should_be_true=False, message="Unspecified", debug_on_fail=True):
     if condition_that_should_be_true:
         return True
-    LOG.critical(f"Failed assert: {message}", message)
+    LOG.critical(f"Failed assert: {message}")
     if debug_on_fail:
         import pdb; pdb.set_trace()
     return condition_that_should_be_true # False by this point - it's not in fact true.
