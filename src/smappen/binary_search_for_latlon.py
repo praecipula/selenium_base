@@ -171,8 +171,6 @@ class SmappenSearchForLatLon(AutomationCommandBase):
         return LatLon(pin_latlon[0], pin_latlon[1])
 
     def execute(self):
-        
-        ASSERT()
         search_latlon = LatLon(self._args.latitude, self._args.longitude)
 
         panel = SmappenParamsPanel()
@@ -180,7 +178,7 @@ class SmappenSearchForLatLon(AutomationCommandBase):
             panel.close()
 
         mouse_bounds = 150 #how far the mouse can move
-        bounds = 0.1 #latlon box to search in (how tight to match), great circle km. (0.1km is 328 feet - too tight?)
+        bounds = 0.05 #latlon box to search in (how tight to match), great circle km. (0.1km is 328 feet - too tight?)
         lat_scale = 1000 #Arbitrary scaling factor; initial mouse pixels per degree
         lon_scale = 1000 #Arbitrary scaling factor; initial mouse pixels per degree
         freeze_zoom = False # don't zoom every time, instead give a "skip" round to measure the new zoom pixels/degree.

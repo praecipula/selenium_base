@@ -1,4 +1,4 @@
-from base import driver, ActionChains, AutomationCommandBase, CommandParser, ASSERT
+from base import driver, By, ActionChains, AutomationCommandBase, CommandParser, ASSERT
 import logging
 import argparse
 import os
@@ -11,7 +11,7 @@ class SmappenParamsPanel:
     element_css = ".create-area-panel"
 
     def __init__(self):
-        elements = driver.find_elements_by_css_selector(self.__class__.element_css)
+        elements = driver.find_elements(By.CSS_SELECTOR, self.__class__.element_css)
         if len(elements) != 1:
             LOG.critical("Got more or less than 1 panel")
             exit(-1)
@@ -26,7 +26,7 @@ class SmappenParamsPanel:
         chain = ActionChains(driver)
         LOG.trace("Creating new area")
         add_panel_button_xpath = "//*[@data-cy='add-area']"
-        button = AutomationCommandBase.element_by_xpath(add_panel_button_xpath)
+        button = AutomationCommandBase.element_by_xpath(By.XPATH, add_panel_button_xpath)
         chain.click(on_element=button)
         chain.perform()
         return True

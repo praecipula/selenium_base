@@ -4,6 +4,7 @@ import re
  
 ## SELENIUM SETUP
 from selenium import webdriver 
+from selenium.webdriver.common.by import By
 # create webdriver object 
 driver = webdriver.Firefox() 
     
@@ -441,7 +442,7 @@ LOG = logging.getLogger("base.LOG")
 LOG.trace("This is a TRACE message")
 LOG.debug("This is a DEBUG message")
 LOG.info("This is a INFO message")
-LOG.warn("This is a WARN message")
+LOG.warning("This is a WARNING message")
 LOG.error("This is a ERROR message")
 LOG.critical("This is a CRITICAL message")
 
@@ -495,7 +496,7 @@ class AutomationCommandBase:
 
     @staticmethod
     def elements_by_xpath(xpath):
-        elements = driver.find_elements_by_xpath(xpath)
+        elements = driver.find_elements(By.XPATH, xpath)
         if len(elements) == 0:
             LOG.info("We didn't find any element")
             return None
