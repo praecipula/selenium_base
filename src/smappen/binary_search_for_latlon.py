@@ -8,7 +8,7 @@
 # you've selected in the map.
 # So Google search for lat, lon (to be done by the API later) and run this to find the placemarker for Google's address in Smappen.
 
-from base import driver, ASSERT, AutomationCommandBase, CommandParser
+from base import driver, By, ASSERT, AutomationCommandBase, CommandParser
 
 import time
 import math
@@ -134,13 +134,13 @@ class SmappenSearchForLatLon(AutomationCommandBase):
     parser.add_argument("longitude", metavar='LONGITUDE', type=float)
 
     def set_map_pin(self, coords = MouseCoords(0, 0)):
-        map_element = driver.find_element_by_xpath("//*[contains(@class, 'map-main')]//*[contains(@class, 'fixed-widget')]")
+        map_element = self.element_by_xpath("//*[contains(@class, 'map-main')]//*[contains(@class, 'fixed-widget')]")
         a = ActionChains(driver)
         LOG.trace("Moving mouse to offset %s", coords)
         a.move_to_element(map_element)
         # Find the offset - I think this is peculiar to Smappen, it doesn't perfectly recenter the map.
         # 125 - half the width of the analysis panel. #analysis-panel
-        smappen_map_recentering = driver.find_element_by_id("analysis-panel").size['width'] / 2
+        smappen_map_recentering = driver.find_element(By.ID, "analysis-panel").size['width'] / 2
         a.move_by_offset(coords.x-smappen_map_recentering, coords.y)
         a.context_click()
         a.move_by_offset(10, 10)
@@ -148,14 +148,14 @@ class SmappenSearchForLatLon(AutomationCommandBase):
         a.perform()
 
     def zoom_in(self):
-        map_element = driver.find_element_by_xpath("//*[contains(@class, 'map-main')]//*[contains(@class, 'fixed-widget')]")
+        map_element = self.element_by_xpath("//*[contains(@class, 'map-main')]//*[contains(@class, 'fixed-widget')]")
         a = ActionChains(driver)
         #a.send_keys_to_element(map_element, Keys.ARROW_UP)
         a.send_keys_to_element(map_element, "+")
         a.perform()
 
     def zoom_way_out(self):
-        map_element = driver.find_element_by_xpath("//*[contains(@class, 'map-main')]//*[contains(@class, 'fixed-widget')]")
+        map_element = self.element_by_xpath("//*[contains(@class, 'map-main')]//*[contains(@class, 'fixed-widget')]")
         a = ActionChains(driver)
         #a.send_keys_to_element(map_element, Keys.ARROW_UP)
         for _ in range(1,10):
@@ -165,7 +165,7 @@ class SmappenSearchForLatLon(AutomationCommandBase):
     def get_map_pin_loc(self):
         # Get the lat, lon from the input bar
         xpath = "//*[@id='search-address-bar']//input[@type='text']"
-        element = driver.find_element_by_xpath(xpath)
+        element = self.element_by_xpath(xpath)
         pin_latlon = element.get_attribute("value").split(", ")
         LOG.info(pin_latlon)
         return LatLon(pin_latlon[0], pin_latlon[1])

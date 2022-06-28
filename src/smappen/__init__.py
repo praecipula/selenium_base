@@ -22,24 +22,44 @@ class SmappenParamsPanel:
             return True
         return False
 
-    def create_area(self):
+    def _data_cy_click(self, attr_value):
         chain = ActionChains(driver)
-        LOG.trace("Creating new area")
-        add_panel_button_xpath = "//*[@data-cy='add-area']"
-        button = AutomationCommandBase.element_by_xpath(By.XPATH, add_panel_button_xpath)
+        button_xpath = "//*[@data-cy='" + attr_value + "']"
+        button = AutomationCommandBase.element_by_xpath(button_xpath)
+        driver.execute_script("arguments[0].scrollIntoView(true);", button);
         chain.click(on_element=button)
         chain.perform()
         return True
 
+
+    def create_area(self):
+        LOG.debug("Creating new area")
+        return self._data_cy_click("add-area")
 
     def close(self):
+        LOG.debug("Closing area creation panel")
+        return self._data_cy_click("close-create-area-panel")
+
+    def click_distance_area_type(self):
+        LOG.debug("Selecting distance area type")
+        return self._data_cy_click("isodistance-button")
+
+    def click_car_mode(self):
+        LOG.debug("Selecting car mode for travel")
+        return self._data_cy_click("car-button")
+
+    def click_calculate(self):
+        LOG.debug("Calculating...")
+        return self._data_cy_click("iso-compute-button")
+
+    def enter_distance_km(self, distance):
+        LOG.debug(f"Entering distance of {distance} km")
         chain = ActionChains(driver)
-        LOG.trace("Closing area creation panel")
-        close_panel_button_xpath = "//*[@data-cy='close-create-area-panel']"
-        button = AutomationCommandBase.element_by_xpath(close_panel_button_xpath)
-        chain.click(on_element=button)
+        distance_textbox_xpath = "//input[@data-cy='input-range']"
+        element = AutomationCommandBase.element_by_xpath(distance_textbox_xpath)
+        element.clear()
+        chain.send_keys_to_element(element, distance)
         chain.perform()
-        return True
 
 class SmappenEnsureLogin(AutomationCommandBase):
     """
