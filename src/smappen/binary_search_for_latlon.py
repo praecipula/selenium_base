@@ -14,7 +14,7 @@ import time
 import math
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
-from smappen import SmappenParamsPanel
+from smappen import SmappenParamsPanel, SmappenMyMapPanel
 
 import logging
 
@@ -132,6 +132,7 @@ class SmappenSearchForLatLon(AutomationCommandBase):
     parser = CommandParser(prog = name, description=f'{name} command')
     parser.add_argument("latitude", metavar='LATITIUDE', type=float)
     parser.add_argument("longitude", metavar='LONGITUDE', type=float)
+    parser.add_argument("map_name", metavar='MAPNAME', type=str, nargs='?')
 
     def set_map_pin(self, coords = MouseCoords(0, 0)):
         map_element = self.element_by_xpath("//*[contains(@class, 'map-main')]//*[contains(@class, 'fixed-widget')]")
@@ -176,9 +177,14 @@ class SmappenSearchForLatLon(AutomationCommandBase):
         panel = SmappenParamsPanel()
         if panel.is_open():
             panel.close()
+        time.sleep(0.5)
+
+        if self._args.map_name:
+            LOG.debug(f"Setting map name to {self._args.map_name}")
+            SmappenMyMapPanel.set_map_name(self._args.map_name)
 
         mouse_bounds = 150 #how far the mouse can move
-        bounds = 0.05 #latlon box to search in (how tight to match), great circle km. (0.1km is 328 feet - too tight?)
+        bounds = 0.1 #latlon box to search in (how tight to match), great circle km. (0.1km is 328 feet - too tight?)
         lat_scale = 1000 #Arbitrary scaling factor; initial mouse pixels per degree
         lon_scale = 1000 #Arbitrary scaling factor; initial mouse pixels per degree
         freeze_zoom = False # don't zoom every time, instead give a "skip" round to measure the new zoom pixels/degree.
@@ -191,7 +197,8 @@ class SmappenSearchForLatLon(AutomationCommandBase):
         search_delta = search_latlon - pin_latlon
         LOG.trace(f"Found search delta of %s", search_delta)
         loop_count = 0
-        while (search_latlon.gc_distance(pin_latlon) > bounds and loop_count < 100):
+        max_loop_count = 100
+        while (search_latlon.gc_distance(pin_latlon) > bounds and loop_count < max_loop_count):
             LOG.debug("Iteration %s", loop_count)
             mouse_delta = MouseCoords(0, 0)
             if search_delta.lon > 0:
@@ -246,6 +253,9 @@ class SmappenSearchForLatLon(AutomationCommandBase):
             loop_count = loop_count + 1
 
         LOG.trace("Done looping")
+        if loop_count >= max_loop_count:
+            return False
+        return True
 
 
 class SmappenSearchForGoogleMapsPin(SmappenSearchForLatLon):
@@ -254,6 +264,7 @@ class SmappenSearchForGoogleMapsPin(SmappenSearchForLatLon):
 
     parser = CommandParser(prog = name, description=f'{name} command')
     parser.add_argument("maps_uri", type=str)
+    parser.add_argument("map_name", metavar='MAPNAME', type=str, nargs='?')
 
     def __init__(self, command_args):
         super().__init__(command_args)

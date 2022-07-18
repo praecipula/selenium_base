@@ -1,9 +1,11 @@
-from base import driver, By, ActionChains, AutomationCommandBase, CommandParser, ASSERT
+from base import driver, By, Keys, ActionChains, AutomationCommandBase, CommandParser, ASSERT
+from base.repl import drop_into_repl
 import logging
 import argparse
 import os
 import usaddress
 import enchant
+import time
 
 LOG = logging.getLogger(__name__)
 
@@ -34,11 +36,15 @@ class SmappenParamsPanel:
 
     def create_area(self):
         LOG.debug("Creating new area")
-        return self._data_cy_click("add-area")
+        rv = self._data_cy_click("add-area")
+        time.sleep(1)
+        return rv
 
     def close(self):
         LOG.debug("Closing area creation panel")
-        return self._data_cy_click("close-create-area-panel")
+        rv = self._data_cy_click("close-create-area-panel")
+        time.sleep(1)
+        return rv
 
     def click_distance_area_type(self):
         LOG.debug("Selecting distance area type")
@@ -60,6 +66,24 @@ class SmappenParamsPanel:
         element.clear()
         chain.send_keys_to_element(element, distance)
         chain.perform()
+
+class SmappenMyMapPanel:
+
+    @staticmethod
+    def set_map_name(name):
+        # Rename the map in Smappen to the address
+        chain = ActionChains(driver)
+        xpath = "//*[@data-cy='map-name']"
+        element = AutomationCommandBase.element_by_xpath(xpath)
+        chain.click(on_element = element)
+        chain.click(on_element = element)
+        chain.perform()
+        subelement = driver.find_element(By.XPATH, xpath + "//input")
+        chain.send_keys_to_element(subelement, Keys.BACKSPACE)
+        chain.send_keys_to_element(subelement, name)
+        chain.perform()
+        return True
+
 
 class SmappenEnsureLogin(AutomationCommandBase):
     """
@@ -90,8 +114,12 @@ class SmappenEnsureLogin(AutomationCommandBase):
 
 
         login_button_xpath = "//*[@data-cy='desktop-navbar-login-button']"
-        element = self.element_by_xpath(login_button_xpath)
-        if not element:
+        elements = self.elements_by_xpath(login_button_xpath)
+        # It's a pure search:
+        # If we can find any elements that fit the pattern we are not logged in.
+        # If we cannot find any elements then we *are* logged in
+        # We make the choice simply based on existence.
+        if elements == None:
             LOG.info("Could not find element, we think we're logged in already.")
             LOG.trace("TODO: implement a real non-null check to verify we are logged in.")
             return True
@@ -174,9 +202,15 @@ class SmappenSearchForLocation(AutomationCommandBase):
         LOG.trace("Comparing to typeahead suggestion")
         # Here, we simply detect if they both have an AddressNumber, but better comparisons will probably be more performant.
         if not "AddressNumber" in typeahead_address:
-            LOG.info("No street number detected; assuming inexact match.")
+            LOG.warn("No street number detected; assuming inexact match.")
+            return False
+        # Next failure mode: it finds something similar like halfway around the world.
+        address_distance = enchant.utils.levenshtein(self._args.address, typeahead_address_text)
+        LOG.debug(f"Levenshtein distance for address search: {address_distance}")
+        if address_distance > 15:
+            LOG.warn("Large levenshtein distance; not sure about the match.")
             return False
         else:
             LOG.info("Pin dropped at address!")
-            return True
+            return SmappenMyMapPanel.set_map_name(self._args.address)
         

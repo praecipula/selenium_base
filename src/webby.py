@@ -5,12 +5,14 @@ import sys
 
 import uri_open
 import uri_goto
+import base.set_tab_title
 import smappen
 import smappen.binary_search_for_latlon
 import smappen.create_isodistance
 
 CLOSE_ON_EXIT = False
 LOG = logging.getLogger(__name__)
+LOG.setLevel(logging.DEBUG)
 
 
 class CommandCollection:
@@ -83,26 +85,32 @@ class CommandCollection:
         for c in self._commands:
             success = c.execute()
             if not success:
-                LOG.warning(f"Command {c} returned false from execution; should we stop? We currently don't")
+                LOG.critical(f"Command {c} returned false from execution; stopping")
+                return False
         LOG.info("Complete!")
         return True
 
 
 
 print(sys.argv)
-cc = CommandCollection()
-cc.register_command(uri_open.Open)
-cc.register_command(uri_goto.Goto)
-cc.register_command(smappen.SmappenEnsureLogin)
-cc.register_command(smappen.SmappenSearchForLocation)
-cc.register_command(smappen.binary_search_for_latlon.SmappenSearchForLatLon)
-cc.register_command(smappen.binary_search_for_latlon.SmappenSearchForLatLon)
-cc.register_command(smappen.binary_search_for_latlon.SmappenSearchForGoogleMapsPin)
-cc.register_command(smappen.create_isodistance.SmappenCreateIsodistance)
 
-cc.build_commands(sys.argv[1:])
+def get_command_collection():
+    cc = CommandCollection()
+    cc.register_command(uri_open.Open)
+    cc.register_command(uri_goto.Goto)
+    cc.register_command(smappen.SmappenEnsureLogin)
+    cc.register_command(smappen.SmappenSearchForLocation)
+    cc.register_command(smappen.binary_search_for_latlon.SmappenSearchForLatLon)
+    cc.register_command(smappen.binary_search_for_latlon.SmappenSearchForLatLon)
+    cc.register_command(smappen.binary_search_for_latlon.SmappenSearchForGoogleMapsPin)
+    cc.register_command(smappen.create_isodistance.SmappenCreateIsodistance)
+    cc.register_command(base.set_tab_title.SetTabTitle)
+    return cc
 
-cc.execute()
+if __name__ == "__main__":
+    cc = get_command_collection()
+    cc.build_commands(sys.argv[1:])
+    cc.execute()
 
 if CLOSE_ON_EXIT:
     base.driver.close()
