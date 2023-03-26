@@ -6,13 +6,16 @@ import sys
 import uri_open
 import uri_goto
 import base.set_tab_title
+import screenshot
 import smappen
 import smappen.binary_search_for_latlon
 import smappen.create_isodistance
+import smappen.download
+import google_maps
 
 CLOSE_ON_EXIT = False
 LOG = logging.getLogger(__name__)
-LOG.setLevel(logging.DEBUG)
+LOG.setLevel(logging.TRACE)
 
 
 class CommandCollection:
@@ -75,6 +78,10 @@ class CommandCollection:
         # command name to trigger aggregation and building, so just flush manually at the end.
         flush()
 
+    @property
+    def commands(self):
+        return self._commands
+
     def execute(self):
         if len(self._commands) == 0:
             LOG.debug("No commands built; print help statement")
@@ -98,13 +105,16 @@ def get_command_collection():
     cc = CommandCollection()
     cc.register_command(uri_open.Open)
     cc.register_command(uri_goto.Goto)
+    cc.register_command(screenshot.Screenshot)
     cc.register_command(smappen.SmappenEnsureLogin)
     cc.register_command(smappen.SmappenSearchForLocation)
     cc.register_command(smappen.binary_search_for_latlon.SmappenSearchForLatLon)
     cc.register_command(smappen.binary_search_for_latlon.SmappenSearchForLatLon)
     cc.register_command(smappen.binary_search_for_latlon.SmappenSearchForGoogleMapsPin)
     cc.register_command(smappen.create_isodistance.SmappenCreateIsodistance)
+    cc.register_command(smappen.download.SmappenDownload)
     cc.register_command(base.set_tab_title.SetTabTitle)
+    cc.register_command(google_maps.GoogleMapsSearchFor)
     return cc
 
 if __name__ == "__main__":

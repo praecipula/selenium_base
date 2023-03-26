@@ -9,7 +9,18 @@ import time
 
 LOG = logging.getLogger(__name__)
 
-class SmappenParamsPanel:
+class SmappenBase(AutomationCommandBase):
+    def _data_cy_click(self, attr_value):
+        chain = ActionChains(driver)
+        button_xpath = "//*[@data-cy='" + attr_value + "']"
+        button = AutomationCommandBase.element_by_xpath(button_xpath)
+        driver.execute_script("arguments[0].scrollIntoView(true);", button);
+        chain.click(on_element=button)
+        chain.perform()
+        return True
+
+
+class SmappenParamsPanel(SmappenBase):
     element_css = ".create-area-panel"
 
     def __init__(self):
@@ -23,15 +34,6 @@ class SmappenParamsPanel:
         if self._panel.get_attribute("class").find("open") > -1:
             return True
         return False
-
-    def _data_cy_click(self, attr_value):
-        chain = ActionChains(driver)
-        button_xpath = "//*[@data-cy='" + attr_value + "']"
-        button = AutomationCommandBase.element_by_xpath(button_xpath)
-        driver.execute_script("arguments[0].scrollIntoView(true);", button);
-        chain.click(on_element=button)
-        chain.perform()
-        return True
 
 
     def create_area(self):
@@ -185,6 +187,9 @@ class SmappenSearchForLocation(AutomationCommandBase):
         chain = ActionChains(driver)
         xpath = "//*[contains(@class, 'geo-dropdown-items')]//button"
         elements = self.elements_by_xpath(xpath)
+        if elements == None:
+            LOG.warn("No typeahead match at all")
+            return False
         typeahead_address_text = elements[0].text
         # TODO: HANDLE MULTIPLE OPTIONS, NOT JUST FIRST TYPEAHEAD
         # Why they didn't implement this as a map escapes me. Translate the zip - ed list of tuples into a map.

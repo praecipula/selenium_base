@@ -484,6 +484,7 @@ class AutomationCommandBase:
     def __init__(self, command_args):
         self._argstr = command_args
         self._args = self.__class__.parser.parse_args(command_args)
+        self._results = {}
         
     def __str__(self):
         return f"{self.__class__.name}: {self._args}"
@@ -502,3 +503,7 @@ class AutomationCommandBase:
             LOG.info("We didn't find any element")
             return None
         return elements
+
+    @property
+    def results(self):
+        return self._results
