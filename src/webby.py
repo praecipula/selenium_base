@@ -12,6 +12,11 @@ import smappen.binary_search_for_latlon
 import smappen.create_isodistance
 import smappen.download
 import google_maps
+import reddit
+import reddit.load_infinite_posts_pages
+import reddit.open_subreddit_top_all_time
+import reddit.image_post_data_storage
+import reddit.capture_all_image_urls
 
 CLOSE_ON_EXIT = False
 LOG = logging.getLogger(__name__)
@@ -115,6 +120,11 @@ def get_command_collection():
     cc.register_command(smappen.download.SmappenDownload)
     cc.register_command(base.set_tab_title.SetTabTitle)
     cc.register_command(google_maps.GoogleMapsSearchFor)
+    cc.register_command(reddit.RedditEnsureLogin)
+    cc.register_command(reddit.load_infinite_posts_pages.RedditLoadInfinitePostsPages)
+    cc.register_command(reddit.open_subreddit_top_all_time.RedditOpenSubredditTopAllTime)
+    cc.register_command(reddit.capture_all_image_urls.RedditCaptureAllImageUrls)
+    cc.register_command(reddit.image_post_data_storage.Storage)
     return cc
 
 if __name__ == "__main__":

@@ -490,15 +490,22 @@ class AutomationCommandBase:
         return f"{self.__class__.name}: {self._args}"
 
     @staticmethod
-    def element_by_xpath(xpath):
-        elements = AutomationCommandBase.elements_by_xpath(xpath)
-        if not ASSERT(len(elements) == 1, f"Found more than one element with xpath {xpath}"):
+    def element_by_xpath(xpath, base_element=None):
+        elements = AutomationCommandBase.elements_by_xpath(xpath, base_element)
+        if elements == None:
+            ASSERT(elements != None, f"Search for element with xpath {xpath} returned no results")
             return None
-        return elements[0]
+        if not ASSERT(len(elements) == 1, f"Found more than one element with xpath {xpath}; returning first"):
+            return elements[0]
+        return elements[0] #Should be the only one.
 
     @staticmethod
-    def elements_by_xpath(xpath):
-        elements = driver.find_elements(By.XPATH, xpath)
+    def elements_by_xpath(xpath, base_element=None):
+        elements = None
+        if not base_element:
+            elements = driver.find_elements(By.XPATH, xpath)
+        else:
+            elements = base_element.find_elements(By.XPATH, xpath)
         if len(elements) == 0:
             LOG.info("We didn't find any element")
             return None

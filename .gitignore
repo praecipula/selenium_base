@@ -135,3 +135,6 @@ dmypy.json
 
 # log files
 logs
+
+credentials.yaml
+*.sqlite
