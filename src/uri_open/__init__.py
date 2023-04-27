@@ -17,6 +17,6 @@ class Open(AutomationCommandBase):
 
     def execute(self):
         LOG.info("Opening new tab at " + self._args.uri)
-        driver.get(self._args.uri)
+        driver().get(self._args.uri)
         return True
 

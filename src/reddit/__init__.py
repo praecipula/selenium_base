@@ -21,7 +21,7 @@ class RedditEnsureLogin(RedditBase):
     def do_login(self):
         # Go to login page
         LOG.info("Logging in... ")
-        driver.get(RedditEnsureLogin.login_url)
+        driver().get(RedditEnsureLogin.login_url)
 
         #Get creds
         credentials = {}
@@ -32,7 +32,7 @@ class RedditEnsureLogin(RedditBase):
                 LOG.error("Caught exception in loading yaml file")
                 raise
 
-        chain = ActionChains(driver)
+        chain = ActionChains(driver())
         
         LOG.trace("Entering in email address")
         username_xpath = "//input[@id='loginUsername']"
@@ -59,8 +59,16 @@ class RedditEnsureLogin(RedditBase):
         LOG.info("Checking for login... ")
         # Go to the root page
         # Check to see if the page lists our profile
-        if driver.current_url != RedditEnsureLogin.base_url:
-            driver.get(RedditEnsureLogin.base_url)
+        if driver().current_url != RedditEnsureLogin.base_url:
+            driver().get(RedditEnsureLogin.base_url)
+        # Brutal quick and dirty check without including selenium timeout
+        # Get the header element
+        header_element_xpath = "//header"
+        header_element = self.element_by_xpath(header_element_xpath)
+        # String search for the login link
+        if "https://www.reddit.com/login" not in header_element.get_attribute('innerHTML'):
+            LOG.info("No login link found; I think we're logged in already")
+            return True
 
         #First, see if we can find the button that links to the login page
         login_element_xpath = "//a[starts-with(@href, 'https://www.reddit.com/login/')]"

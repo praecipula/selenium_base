@@ -23,7 +23,7 @@ class RedditLoadInfinitePostsPages(RedditBase):
     def do_scroll(self):
         # Go to login page
         LOG.info("Scrolling to page bottom ... ")
-        driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
+        driver().execute_script("window.scrollTo(0, document.body.scrollHeight)")
         return True
 
     def execute(self):
@@ -31,7 +31,7 @@ class RedditLoadInfinitePostsPages(RedditBase):
         for i in range(self._pages):
             LOG.info(f"Scrolling: {i}")
             self.do_scroll()
-            sleep_time =random.gauss(3,1) 
+            sleep_time = abs(random.gauss(3,1) )
             LOG.debug(f"Sleeping for {sleep_time}")
             time.sleep(sleep_time) #To get the page to load. I'm not sure if there's a better way than waiting.
         return True

@@ -19,6 +19,6 @@ class Goto(AutomationCommandBase):
 
     def execute(self):
         LOG.info("Opening url" + str(self))
-        driver.get(self._args.uri)
+        driver().get(self._args.uri)
         return True
 

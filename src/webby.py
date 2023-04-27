@@ -17,6 +17,7 @@ import reddit.load_infinite_posts_pages
 import reddit.open_subreddit_top_all_time
 import reddit.image_post_data_storage
 import reddit.capture_all_image_urls
+import reddit.create_canonical_imgur_links
 
 CLOSE_ON_EXIT = False
 LOG = logging.getLogger(__name__)
@@ -125,6 +126,7 @@ def get_command_collection():
     cc.register_command(reddit.open_subreddit_top_all_time.RedditOpenSubredditTopAllTime)
     cc.register_command(reddit.capture_all_image_urls.RedditCaptureAllImageUrls)
     cc.register_command(reddit.image_post_data_storage.Storage)
+    cc.register_command(reddit.create_canonical_imgur_links.RedditNormalizeImageLocations)
     return cc
 
 if __name__ == "__main__":
@@ -133,4 +135,4 @@ if __name__ == "__main__":
     cc.execute()
 
 if CLOSE_ON_EXIT:
-    base.driver.close()
+    base.driver().close()

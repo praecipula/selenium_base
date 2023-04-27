@@ -136,12 +136,12 @@ class SmappenSearchForLatLon(AutomationCommandBase):
 
     def set_map_pin(self, coords = MouseCoords(0, 0)):
         map_element = self.element_by_xpath("//*[contains(@class, 'map-main')]//*[contains(@class, 'fixed-widget')]")
-        a = ActionChains(driver)
+        a = ActionChains(driver())
         LOG.trace("Moving mouse to offset %s", coords)
         a.move_to_element(map_element)
         # Find the offset - I think this is peculiar to Smappen, it doesn't perfectly recenter the map.
         # 125 - half the width of the analysis panel. #analysis-panel
-        smappen_map_recentering = driver.find_element(By.ID, "analysis-panel").size['width'] / 2
+        smappen_map_recentering = driver().find_element(By.ID, "analysis-panel").size['width'] / 2
         a.move_by_offset(coords.x-smappen_map_recentering, coords.y)
         a.context_click()
         a.move_by_offset(10, 10)
@@ -150,14 +150,14 @@ class SmappenSearchForLatLon(AutomationCommandBase):
 
     def zoom_in(self):
         map_element = self.element_by_xpath("//*[contains(@class, 'map-main')]//*[contains(@class, 'fixed-widget')]")
-        a = ActionChains(driver)
+        a = ActionChains(driver())
         #a.send_keys_to_element(map_element, Keys.ARROW_UP)
         a.send_keys_to_element(map_element, "+")
         a.perform()
 
     def zoom_way_out(self):
         map_element = self.element_by_xpath("//*[contains(@class, 'map-main')]//*[contains(@class, 'fixed-widget')]")
-        a = ActionChains(driver)
+        a = ActionChains(driver())
         #a.send_keys_to_element(map_element, Keys.ARROW_UP)
         for _ in range(1,10):
             a.send_keys_to_element(map_element, "-")

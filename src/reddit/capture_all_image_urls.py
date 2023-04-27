@@ -58,7 +58,7 @@ class RedditCaptureAllImageUrls(RedditBase):
         return True
 
     def execute(self):
-        current_subreddit = RedditSubreddit.find_or_create_by_url(driver.current_url)
+        current_subreddit = RedditSubreddit.find_or_create_by_url(driver().current_url)
         LOG.info("Creating entries for all the images on {current_subreddit}")
         # This gets all posts that have outbound links.
         # Do we even want this? All posts will get all inside and outside links.

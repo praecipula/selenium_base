@@ -6,6 +6,7 @@ import re
 import logging
 LOG = logging.getLogger(__name__)
 
+
 from base import AutomationCommandBase, CommandParser, ASSERT
 
 import sqlalchemy
@@ -32,7 +33,7 @@ class Storage(AutomationCommandBase):
 
     @classmethod
     def initialize_db(cls):
-        cls._engine = sqlalchemy.create_engine("sqlite:///" + cls.db_file_name, echo=True)
+        cls._engine = sqlalchemy.create_engine("sqlite:///" + cls.db_file_name)
         Session = sessionmaker()
         Session.configure(bind=cls._engine)
         cls._session = Session()
@@ -110,6 +111,7 @@ class RedditImagePost(Base):
     upvotes = Column(String, nullable=False)
     posted_by = Column(String) # Can be null if the user's deleted
     image_url = Column(String) # Can be null if this is an "internal" post.
+    canonical_media_url = Column(String)
     subreddit_id = Column(Integer, ForeignKey("subreddit.id"))
 
     __table_args__ = (

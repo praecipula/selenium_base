@@ -11,10 +11,10 @@ LOG = logging.getLogger(__name__)
 
 class SmappenBase(AutomationCommandBase):
     def _data_cy_click(self, attr_value):
-        chain = ActionChains(driver)
+        chain = ActionChains(driver())
         button_xpath = "//*[@data-cy='" + attr_value + "']"
         button = AutomationCommandBase.element_by_xpath(button_xpath)
-        driver.execute_script("arguments[0].scrollIntoView(true);", button);
+        driver().execute_script("arguments[0].scrollIntoView(true);", button);
         chain.click(on_element=button)
         chain.perform()
         return True
@@ -24,7 +24,7 @@ class SmappenParamsPanel(SmappenBase):
     element_css = ".create-area-panel"
 
     def __init__(self):
-        elements = driver.find_elements(By.CSS_SELECTOR, self.__class__.element_css)
+        elements = driver().find_elements(By.CSS_SELECTOR, self.__class__.element_css)
         if len(elements) != 1:
             LOG.critical("Got more or less than 1 panel")
             exit(-1)
@@ -62,7 +62,7 @@ class SmappenParamsPanel(SmappenBase):
 
     def enter_distance_km(self, distance):
         LOG.debug(f"Entering distance of {distance} km")
-        chain = ActionChains(driver)
+        chain = ActionChains(driver())
         distance_textbox_xpath = "//input[@data-cy='input-range']"
         element = AutomationCommandBase.element_by_xpath(distance_textbox_xpath)
         element.clear()
@@ -74,13 +74,13 @@ class SmappenMyMapPanel:
     @staticmethod
     def set_map_name(name):
         # Rename the map in Smappen to the address
-        chain = ActionChains(driver)
+        chain = ActionChains(driver())
         xpath = "//*[@data-cy='map-name']"
         element = AutomationCommandBase.element_by_xpath(xpath)
         chain.click(on_element = element)
         chain.click(on_element = element)
         chain.perform()
-        subelement = driver.find_element(By.XPATH, xpath + "//input")
+        subelement = driver().find_element(By.XPATH, xpath + "//input")
         chain.send_keys_to_element(subelement, Keys.BACKSPACE)
         chain.send_keys_to_element(subelement, name)
         chain.perform()
@@ -111,8 +111,8 @@ class SmappenEnsureLogin(AutomationCommandBase):
         LOG.info("Checking for login... ")
         # Go to the root page
         # Check to see if the page lists our profile
-        if driver.current_url != SmappenEnsureLogin.base_url:
-            driver.get(SmappenEnsureLogin.base_url)
+        if driver().current_url != SmappenEnsureLogin.base_url:
+            driver().get(SmappenEnsureLogin.base_url)
 
 
         login_button_xpath = "//*[@data-cy='desktop-navbar-login-button']"
@@ -126,10 +126,10 @@ class SmappenEnsureLogin(AutomationCommandBase):
             LOG.trace("TODO: implement a real non-null check to verify we are logged in.")
             return True
         LOG.info(f"Successfully detected we are not logged in")
-        driver.get(SmappenEnsureLogin.login_url)
+        driver().get(SmappenEnsureLogin.login_url)
         # Prefer action chains - they will generally be human-ish enough to get the job done even
         # for times we need onBlur or onMouseMove
-        chain = ActionChains(driver)
+        chain = ActionChains(driver())
         LOG.trace("Entering in email address")
         username_xpath = "//input[@type='email']"
         element = self.element_by_xpath(username_xpath)
@@ -172,7 +172,7 @@ class SmappenSearchForLocation(AutomationCommandBase):
         # significantly more robust.
         # Find the search address bar and enter in the address
         LOG.trace("Entering in address")
-        chain = ActionChains(driver)
+        chain = ActionChains(driver())
         xpath = "//*[@id='search-address-bar']//input[@type='text']"
         element = self.element_by_xpath(xpath)
         chain.click(on_element=element)
@@ -184,7 +184,7 @@ class SmappenSearchForLocation(AutomationCommandBase):
         # in that city; e.g. 12345 Sesame Street, SomeTown where the address is really 12345 Sesame Street, OtherTownRightNextDoor.
         # OSM will not find the address and instead drop the best guess at SomeTown. Perhaps there's a Google Maps API call or something
         # we can do here; for now, do it by hand with a lat/lon search.
-        chain = ActionChains(driver)
+        chain = ActionChains(driver())
         xpath = "//*[contains(@class, 'geo-dropdown-items')]//button"
         elements = self.elements_by_xpath(xpath)
         if elements == None:

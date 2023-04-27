@@ -6,11 +6,21 @@ import re
 from selenium import webdriver 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.firefox.options import Options
 # create webdriver object 
-driver = webdriver.Firefox() 
-    
-# set implicit wait time
-driver.implicitly_wait(10) # seconds
+opts = Options()
+opts.add_argument("--profile")
+opts.add_argument('/Users/matt/Library/Application Support/Firefox/Profiles/5irm4y59.selenium')
+
+global _driver
+_driver = None
+def driver():
+    global _driver
+    if not _driver:
+        _driver = webdriver.Firefox(options=opts)         
+        # set implicit wait time
+        _driver.implicitly_wait(10) # seconds
+    return _driver
 
 from selenium.webdriver.common.action_chains import ActionChains
 
@@ -503,7 +513,7 @@ class AutomationCommandBase:
     def elements_by_xpath(xpath, base_element=None):
         elements = None
         if not base_element:
-            elements = driver.find_elements(By.XPATH, xpath)
+            elements = driver().find_elements(By.XPATH, xpath)
         else:
             elements = base_element.find_elements(By.XPATH, xpath)
         if len(elements) == 0:

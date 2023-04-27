@@ -19,6 +19,6 @@ class Screenshot(AutomationCommandBase):
 
     def execute(self):
         LOG.info("Taking a screenshot" + str(self))
-        driver.save_screenshot(self._args.image_destination)
+        driver().save_screenshot(self._args.image_destination)
         return True
 

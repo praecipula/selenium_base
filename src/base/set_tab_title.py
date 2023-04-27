@@ -26,5 +26,5 @@ class SetTabTitle(AutomationCommandBase):
         # TODO: in a multi-tab environment we might need to think about which tab is active.
         # I think it's reasonable to require the scripter to select the tab then this sets the
         # title of the active tab.
-        driver.execute_script('document.title = "' + self._args.text + '"')
+        driver().execute_script('document.title = "' + self._args.text + '"')
         return True

@@ -25,7 +25,7 @@ class RedditOpenSubredditTopAllTime(RedditBase):
 
     def execute(self):
         LOG.info(f"Going to all time top posts for {self._subreddit}")
-        driver.get(RedditOpenSubredditTopAllTime.subreddit_url_prefix + \
+        driver().get(RedditOpenSubredditTopAllTime.subreddit_url_prefix + \
                 self._subreddit + \
                 RedditOpenSubredditTopAllTime.subreddit_url_top_all_time_suffix)
 

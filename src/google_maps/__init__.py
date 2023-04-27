@@ -16,7 +16,7 @@ class GoogleMapsSearchFor(AutomationCommandBase):
 
     def execute(self):
         LOG.info(f"Searching for address in Google Maps: {self._args.address}")
-        chain = ActionChains(driver)
+        chain = ActionChains(driver())
         xpath = "//*[@id='searchboxinput']"
         element=self.element_by_xpath(xpath)
         chain.click(on_element = element)
@@ -26,7 +26,7 @@ class GoogleMapsSearchFor(AutomationCommandBase):
         time.sleep(5)
         # Get the URI of the page
         #TODO: Generalize this so all commands are using a results map
-        self._results["url"] = driver.current_url
+        self._results["url"] = driver().current_url
         LOG.info(self._results["url"])
         return True
 
@@ -56,7 +56,7 @@ class GoogleMapsSearchFor(AutomationCommandBase):
 #        # in that city; e.g. 12345 Sesame Street, SomeTown where the address is really 12345 Sesame Street, OtherTownRightNextDoor.
 #        # OSM will not find the address and instead drop the best guess at SomeTown. Perhaps there's a Google Maps API call or something
 #        # we can do here; for now, do it by hand with a lat/lon search.
-#        chain = ActionChains(driver)
+#        chain = ActionChains(driver())
 #        xpath = "//*[contains(@class, 'geo-dropdown-items')]//button"
 #        elements = self.elements_by_xpath(xpath)
 #        typeahead_address_text = elements[0].text

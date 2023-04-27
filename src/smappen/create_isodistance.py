@@ -24,7 +24,7 @@ class SmappenCreateIsodistance(AutomationCommandBase):
 
     def find_new_isodistance_element(self, text):
         LOG.debug("Waiting for isodistance to be calculated...")
-        driver.find_element(By.XPATH, "//*[@data-cy='area']//span[contains(text(), '" + text + "')]")
+        driver().find_element(By.XPATH, "//*[@data-cy='area']//span[contains(text(), '" + text + "')]")
         LOG.debug("Found element")
 
     def execute(self):
