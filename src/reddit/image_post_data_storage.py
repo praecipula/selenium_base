@@ -111,7 +111,7 @@ class RedditImagePost(Base):
     upvotes = Column(String, nullable=False)
     posted_by = Column(String) # Can be null if the user's deleted
     image_url = Column(String) # Can be null if this is an "internal" post.
-    canonical_media_url = Column(String)
+    canonical_media_urls = Column(String) #comma-separated list of urls linked to this post.
     subreddit_id = Column(Integer, ForeignKey("subreddit.id"))
 
     __table_args__ = (

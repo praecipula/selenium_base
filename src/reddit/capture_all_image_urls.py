@@ -40,7 +40,7 @@ class RedditCaptureAllImageUrls(RedditBase):
             elif link.get_attribute('data-click-id') == 'body':
                 LOG.debug(f"It's a link to the long-form post")
                 # *Very dirty* check for whether this is the one we want; doesn't incur selenium default wait though.
-                if not "h3" in link.get_attribute('innerHTML'):
+                if not "<h3" in link.get_attribute('innerHTML'):
                     LOG.info("Long form link found but no title; assuming another link has the title embedded in it.")
                     continue
                 # This is the link to the actual longer-form post. It has some good stuff.

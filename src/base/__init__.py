@@ -14,12 +14,13 @@ opts.add_argument('/Users/matt/Library/Application Support/Firefox/Profiles/5irm
 
 global _driver
 _driver = None
+selenium_implicit_wait_default = 10
 def driver():
     global _driver
     if not _driver:
         _driver = webdriver.Firefox(options=opts)         
         # set implicit wait time
-        _driver.implicitly_wait(10) # seconds
+        _driver.implicitly_wait(selenium_implicit_wait_default) # seconds
     return _driver
 
 from selenium.webdriver.common.action_chains import ActionChains

@@ -138,3 +138,5 @@ logs
 
 credentials.yaml
 *.sqlite
+src/reddit/media
+.DS_Store
