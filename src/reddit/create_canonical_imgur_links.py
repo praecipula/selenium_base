@@ -9,6 +9,7 @@ import time
 import random
 import glob
 import difflib
+import slack_me
 from base import AutomationCommandBase, CommandParser, driver, ActionChains, By, selenium_implicit_wait_default
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions
@@ -42,6 +43,9 @@ class RedditNormalizeImageLocations(AutomationCommandBase):
 
     media_download_dir = pathlib.PurePath(__file__).parent / "media"
     screenshot_targets_dir = pathlib.PurePath(__file__).parent / "screenshot_targets"
+
+    time_before_save_key = 0.2
+    time_to_download = 0.5
 
     def __init__(self, command_args):
         super().__init__(command_args)
@@ -182,6 +186,11 @@ class RedditNormalizeImageLocations(AutomationCommandBase):
                 if len(elements) > 1:
                     LOG.warning(f"Found more than one {technique_name} media. Interesting. Might be OK?")
                 canonical_location = elements[0].get_attribute(source_attribute)
+                if canonical_location == None:
+                    # This happened once where there was a spoiler tag on a post. That meant the element was there but the
+                    # image hadn't been loaded into it.
+                    LOG.warning(f"{elements[0]} has a None match for its source_attribute {source_attribute}. Returning None without setting canonical location.")
+                    return None;
                 LOG.info(f"{technique_name}: {post.path} =>\t{canonical_location}")
                 element_link_set.update({canonical_location: None})
             else:
@@ -220,16 +229,28 @@ class RedditNormalizeImageLocations(AutomationCommandBase):
         LOG.debug(f"Finding image {image_location}")
         # Recall that these are absolute (non-retina) coordinates.
         # Assume that dialog boxes are in the middle-ish of the screen
-        non_retina_size = [c for c in pyautogui.size()]
-        non_retina_bounding_box_radius=500
-        region = [non_retina_size[0] - non_retina_bounding_box_radius,
-                  non_retina_size[1] - non_retina_bounding_box_radius,
+        non_retina_size = pyautogui.size()
+        non_retina_bounding_box_radius=200
+        region = [non_retina_size[0]/2 - non_retina_bounding_box_radius,
+                  non_retina_size[1]/2 - non_retina_bounding_box_radius,
                   non_retina_bounding_box_radius * 2,
                   non_retina_bounding_box_radius * 2]
-        LOG.trace(f"Locating image in bounding box of {region}")
-        location = pyautogui.locateOnScreen(str(image_location), grayscale=False, confidence=confidence, region=region, **kwargs)
+        # Scale to retina for region
+        scaled_region = tuple([int(c*2) for c in region])
+
+        # OK, this can fail with a FileNotFoundException with a printed statement like, "could not create image from display 2077748985".
+        # Is it workable to retry?
+        retries = 4
+        location = None
+        for i in range(retries):
+            try:
+                location = pyautogui.locateOnScreen(str(image_location), grayscale=False, confidence=confidence, region=scaled_region, **kwargs)
+                break
+            except FileNotFoundError as e:
+                LOG.warn("locateOnScreen failed because it failed to find the screenshot. Retry {i} of {retries}")
         if location == None:
             raise Exception(f"Couldn't find image; reference img {image_location}")
+
         center = pyautogui.center(location)
         retina_center = [c / 2 for c in center]
         LOG.info(f"Image found at (non-retina coords) {center}; retina coords {retina_center}")
@@ -267,40 +288,46 @@ class RedditNormalizeImageLocations(AutomationCommandBase):
             else:
                 LOG.info(f"Local file for {filename} does not exist locally; we'll download it.")
                 driver().get(media_url)
-                time.sleep(0.2)
+                # This is time to resolve the page AND to follow redirects to get the removed.png name.
+                time.sleep(RedditNormalizeImageLocations.time_before_save_key)
                 current_url = driver().current_url
                 if current_url.endswith("removed.png"):
                     LOG.info("Current image seems to be removed")
                     post.canonical_media_urls = "[DELETED]"
                     continue
                 # Wait for page to fully load? Get an element with implicit wait? Does it do this anyway?
+                retries = 2
                 LOG.info("Sending save hotkey")
-                retries = 4
-                # Latch this so we don't try to save multiple times
-                found_save_image_somewhere = False
+                pyautogui.keyDown('command')
+                pyautogui.press('s')
+                pyautogui.keyUp('command')
                 for i in range(retries):
                     # Try to click the button first, then if it's not present, send the hotkey.
                     # This is because the hotkey will dismiss (with the correct action!) the dialog
                     # meaning it will disappear and we'll retry through all the retries for a
                     # dialog that is never there.
                     try:
-                        pyautogui.hotkey('command', 's')
-                        time.sleep(0.2)
-                        retina_center = self.find_image("save_page.png", 0.7)
+                        retina_center = self.find_image("save_page.png", 0.8)
                         self.jiggle_click(retina_center)
-                        break
                     except Exception as e:
-                        LOG.debug(f"Did not find save button: try {i} of {retries}")
+                        # This string matching BS is because the type of e is just Exception.
+                        # Subclass would be better.
+                        if not "Couldn't find image" in str(e):
+                            raise
+                        else:
+                            LOG.debug(f"Did not find save button: try {i} of {retries}")
                 for i in range(retries):
                     try:
-                        retina_center = self.find_image("replace_existing_file.png", 0.95)
+                        retina_center = self.find_image("replace_existing_file.png", 0.9)
                         self.jiggle_click(retina_center)
                         # dont break, just keep retrying.
                     except Exception as e:
-                        LOG.debug(f"Did not find replace prompt (this can be normal): try {i} of {retries} {e}")
-                        pass
+                        if not "Couldn't find image" in str(e):
+                            raise
+                        else:
+                            LOG.debug(f"Did not find replace prompt (this can be normal): try {i} of {retries}")
                 # Allow the file to download; then move it
-                time.sleep(2)
+                time.sleep(RedditNormalizeImageLocations.time_to_download)
                 files = glob.glob(str(pathlib.Path.home()) + "/Downloads/**/*" + pathlib.Path(filename).stem + "*", recursive=True)
                 def move_file_to_media(file):
                     '''
@@ -327,7 +354,7 @@ class RedditNormalizeImageLocations(AutomationCommandBase):
                         else:
                             LOG.trace(f"{f} is not a file, maybe a dir?")
                     if minimum_file == None:
-                        LOG.warning("No match found for file {filename}; assume it's broken / removed.")
+                        LOG.warning(f"No match found for file {filename}; assume it's not part of a full-page download.")
                     else:
                         move_file_to_media(minimum_file)
                 else:
@@ -345,22 +372,29 @@ class RedditNormalizeImageLocations(AutomationCommandBase):
             query = query.offset(self._offset)
         LOG.info(f"Processing results of query: {str(query)}")
         posts_to_process = query.all()
+        slack_me.post_message(f"Starting processing of {len(posts_to_process)} jobs...")
         for i in range(self._num_posts):
+            LOG.info(f"Processing post {i}")
+            if i % 100 == 0:
+                slack_me.post_message(f"Picking up job {i}")
             if i + 1 >= len(posts_to_process):
                 LOG.info("Ran out of posts, we must be done!")
-                return True
+                break
             post = posts_to_process[i]
             LOG.debug(f"Raw image link for {post.path} is {post.image_url}")
             if not post.canonical_media_urls:
+                # Handle with Reddit, which doesn't have an image url in itself (it is itself the post)
                 if post.image_url == None:
                     self.handle_reddit_image_post(post)
                 else:
                     url = urllib.parse.urlparse(post.image_url)
+                    # Handle imgur
                     if "imgur" in url.netloc:
                         if pathlib.Path(url.path).suffix == '':
                             self.handle_imgur_page_before_image(post)
                         else:
                             self.handle_complete_imgur_link(post)
+                    # Handle redgifs
                     if hasattr(post, 'canonical_media_urls'):
                         LOG.info(f"Canonical media link is {post.canonical_media_urls}")
                     else:
@@ -371,4 +405,6 @@ class RedditNormalizeImageLocations(AutomationCommandBase):
             self.download_assets_if_not_present(post)
             # And save the model.
             Storage.session().commit()
+
+        slack_me.post_message(f"Processing COMPLETE!")
         return True
