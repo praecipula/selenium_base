@@ -224,6 +224,39 @@ class RedditNormalizeImageLocations(AutomationCommandBase):
         post.canonical_media_urls = ','.join(element_link_set.keys())
         return True
 
+    def handle_redgifs(self, post):
+        driver().get(post.image_url)
+        element_link_set = {}
+
+        #TODO: this is a repeat from the above. Copy paste is the opposite of DRY.
+        def find_element(xpath, source_attribute, technique_name):
+            driver().implicitly_wait(3)
+            elements = self.elements_by_xpath(xpath)
+            driver().implicitly_wait(selenium_implicit_wait_default)
+            if elements and len(elements) > 0:
+                # Found one. Only one?
+                if len(elements) > 1:
+                    LOG.warning(f"Found more than one {technique_name} media. Interesting. Might be OK?")
+                    import pdb; pdb.set_trace()
+                canonical_location = elements[0].get_attribute(source_attribute)
+                if canonical_location == None:
+                    # This happened once where there was a spoiler tag on a post. That meant the element was there but the
+                    # image hadn't been loaded into it.
+                    LOG.warning(f"{elements[0]} has a None match for its source_attribute {source_attribute}. Returning None without setting canonical location.")
+                    import pdb; pdb.set_trace()
+                    return None;
+                LOG.info(f"{technique_name}: {post.path} =>\t{canonical_location}")
+                element_link_set.update({canonical_location: None})
+            else:
+                LOG.info(f"Did not find {technique_name} media.")
+
+        find_element("//div[contains(@class, 'videoWrapper')]/video", "src", "standard redgif")
+        if len(element_link_set) == 0:
+            post.canonical_media_urls="[NOMEDIA]"
+        else:
+            post.canonical_media_urls=",".join(element_link_set.keys())
+        return True
+
     def find_image(self, image, confidence=0.6, **kwargs):
         image_location = RedditNormalizeImageLocations.screenshot_targets_dir / image
         LOG.debug(f"Finding image {image_location}")
@@ -267,13 +300,13 @@ class RedditNormalizeImageLocations(AutomationCommandBase):
         pyautogui.moveTo((x, y))
         pyautogui.click()
 
-    def download_assets_if_not_present(self, post):
+    def are_asset_files_present(self, post):
         '''
         This is to be called after the assets have been populated in the browser
         '''
         media_urls = post.canonical_media_urls
         if media_urls == None or media_urls == '':
-            LOG.info("Media url is empty; skipping")
+            LOG.info("Media url is empty; assume files are not present on fs")
             return False
         for media_url in media_urls.split(','):
             # Check if it's on the filesystem
@@ -286,80 +319,112 @@ class RedditNormalizeImageLocations(AutomationCommandBase):
             if len(destination_files) != 0:
                 LOG.info(f"Local file for {filename} appears to already exist on the FS.")
             else:
-                LOG.info(f"Local file for {filename} does not exist locally; we'll download it.")
-                driver().get(media_url)
-                # This is time to resolve the page AND to follow redirects to get the removed.png name.
-                time.sleep(RedditNormalizeImageLocations.time_before_save_key)
-                current_url = driver().current_url
-                if current_url.endswith("removed.png"):
-                    LOG.info("Current image seems to be removed")
-                    post.canonical_media_urls = "[DELETED]"
-                    continue
-                # Wait for page to fully load? Get an element with implicit wait? Does it do this anyway?
-                retries = 2
-                LOG.info("Sending save hotkey")
-                pyautogui.keyDown('command')
-                pyautogui.press('s')
-                pyautogui.keyUp('command')
-                for i in range(retries):
-                    # Try to click the button first, then if it's not present, send the hotkey.
-                    # This is because the hotkey will dismiss (with the correct action!) the dialog
-                    # meaning it will disappear and we'll retry through all the retries for a
-                    # dialog that is never there.
-                    try:
-                        retina_center = self.find_image("save_page.png", 0.8)
-                        self.jiggle_click(retina_center)
-                    except Exception as e:
-                        # This string matching BS is because the type of e is just Exception.
-                        # Subclass would be better.
-                        if not "Couldn't find image" in str(e):
-                            raise
-                        else:
-                            LOG.debug(f"Did not find save button: try {i} of {retries}")
-                for i in range(retries):
-                    try:
-                        retina_center = self.find_image("replace_existing_file.png", 0.9)
-                        self.jiggle_click(retina_center)
-                        # dont break, just keep retrying.
-                    except Exception as e:
-                        if not "Couldn't find image" in str(e):
-                            raise
-                        else:
-                            LOG.debug(f"Did not find replace prompt (this can be normal): try {i} of {retries}")
-                # Allow the file to download; then move it
-                time.sleep(RedditNormalizeImageLocations.time_to_download)
-                files = glob.glob(str(pathlib.Path.home()) + "/Downloads/**/*" + pathlib.Path(filename).stem + "*", recursive=True)
-                def move_file_to_media(file):
-                    '''
-                    Little helper
-                    '''
-                    dest = str(RedditNormalizeImageLocations.media_download_dir) + "/" + file.name
-                    LOG.info(f"Moving {str(file)} to {dest}")
-                    file.rename(dest)
+                LOG.info(f"Local file for {filename} is NOT present on the FS")
+                return False
+        return True
 
-                if len(files) != 1:
-                    LOG.warning(f"Found 0 or more than one files in Downloads for {filename}; trying to find best match from {files}")
-                    minimum_distance = 0.0
-                    minimum_file = None
-                    for f in files:
-                        fpath = pathlib.Path(f)
-                        if fpath.is_file():
-                            # Do a difference. Sometimes the file might be hosted with a .gif extension and instead be .mp4
-                            # on the filesystem, so we choose the closest of the filenames of the path.
-                            ratio = difflib.SequenceMatcher(None, fpath.name, filename).ratio()
-                            if ratio > minimum_distance:
-                                LOG.debug(f"New closest match found: {fpath.name} to {filename} is {ratio}")
-                                minimum_distance = ratio
-                                minimum_file = fpath
-                        else:
-                            LOG.trace(f"{f} is not a file, maybe a dir?")
-                    if minimum_file == None:
-                        LOG.warning(f"No match found for file {filename}; assume it's not part of a full-page download.")
+    def download_assets_if_not_present(self, post):
+        '''
+        This is to be called after the assets have been populated in the browser
+        '''
+        if self.are_asset_files_present(post):
+            LOG.info("All asset files are present in the fs; not downloading.")
+            return True
+
+        # This means if any media is missing, it's all redownloaded. Ah, well, no big deal.
+        media_urls = post.canonical_media_urls
+        if media_urls == None or media_urls == '':
+            LOG.info("Media url is empty; skipping")
+            return False
+        for media_url in media_urls.split(','):
+            # Check if it's on the filesystem
+            server_path = urllib.parse.urlparse(media_url)
+            filename = pathlib.Path(server_path.path).name
+            driver().get(media_url)
+            # This is time to resolve the page AND to follow redirects to get the removed.png name.
+            time.sleep(RedditNormalizeImageLocations.time_before_save_key)
+            # Oof. There's no response code checking in Selenium?!?
+            # Any response that has a pre as a top level child of body => assume it's an error.
+            # For any error we want to restart, so delete canonical_media_urls (set it to empty.)
+            error_message_xpath = "//body/pre"
+            driver().implicitly_wait(1)
+            elements = self.elements_by_xpath(error_message_xpath)
+            driver().implicitly_wait(selenium_implicit_wait_default)
+            if elements and len(elements) > 0:
+                LOG.warn(f"I think we're getting an error page from Firefox; deleting canonical_media_urls and you should retry later.")
+                post.canonical_media_urls = None
+                return
+            # Check if this was removed (imgur or reddit, I don't recall)
+            current_url = driver().current_url
+            if current_url.endswith("removed.png"):
+                LOG.info("Current image seems to be removed")
+                post.canonical_media_urls = "[DELETED]"
+                continue
+            # Wait for page to fully load? Get an element with implicit wait? Does it do this anyway?
+            retries = 2
+            LOG.info("Sending save hotkey")
+            pyautogui.keyDown('command')
+            pyautogui.press('s')
+            pyautogui.keyUp('command')
+            for i in range(retries):
+                # Try to click the button first, then if it's not present, send the hotkey.
+                # This is because the hotkey will dismiss (with the correct action!) the dialog
+                # meaning it will disappear and we'll retry through all the retries for a
+                # dialog that is never there.
+                try:
+                    retina_center = self.find_image("save_page.png", 0.8)
+                    self.jiggle_click(retina_center)
+                except Exception as e:
+                    # This string matching BS is because the type of e is just Exception.
+                    # Subclass would be better.
+                    if not "Couldn't find image" in str(e):
+                        raise
                     else:
-                        move_file_to_media(minimum_file)
+                        LOG.debug(f"Did not find save button: try {i} of {retries}")
+            for i in range(retries):
+                try:
+                    retina_center = self.find_image("replace_existing_file.png", 0.9)
+                    self.jiggle_click(retina_center)
+                    # dont break, just keep retrying.
+                except Exception as e:
+                    if not "Couldn't find image" in str(e):
+                        raise
+                    else:
+                        LOG.debug(f"Did not find replace prompt (this can be normal): try {i} of {retries}")
+            # Allow the file to download; then move it
+            time.sleep(RedditNormalizeImageLocations.time_to_download)
+            files = glob.glob(str(pathlib.Path.home()) + "/Downloads/**/*" + pathlib.Path(filename).stem + "*", recursive=True)
+            def move_file_to_media(file):
+                '''
+                Little helper
+                '''
+                dest = str(RedditNormalizeImageLocations.media_download_dir) + "/" + file.name
+                LOG.info(f"Moving {str(file)} to {dest}")
+                file.rename(dest)
+
+            if len(files) != 1:
+                LOG.warning(f"Found 0 or more than one files in Downloads for {filename}; trying to find best match from {files}")
+                minimum_distance = 0.0
+                minimum_file = None
+                for f in files:
+                    fpath = pathlib.Path(f)
+                    if fpath.is_file():
+                        # Do a difference. Sometimes the file might be hosted with a .gif extension and instead be .mp4
+                        # on the filesystem, so we choose the closest of the filenames of the path.
+                        ratio = difflib.SequenceMatcher(None, fpath.name, filename).ratio()
+                        if ratio > minimum_distance:
+                            LOG.debug(f"New closest match found: {fpath.name} to {filename} is {ratio}")
+                            minimum_distance = ratio
+                            minimum_file = fpath
+                    else:
+                        LOG.trace(f"{f} is not a file, maybe a dir?")
+                if minimum_file == None:
+                    LOG.warning(f"No match found for file {filename}; assume it's not part of a full-page download.")
                 else:
-                    file = pathlib.Path(files[0])
-                    move_file_to_media(file)
+                    move_file_to_media(minimum_file)
+            else:
+                file = pathlib.Path(files[0])
+                move_file_to_media(file)
 
 
 
@@ -367,6 +432,7 @@ class RedditNormalizeImageLocations(AutomationCommandBase):
         #filter(RedditImagePost.canonical_media_urls.is_(None)). \
         query = Storage.session().query(RedditImagePost). \
                 filter(RedditImagePost.canonical_media_urls.is_not("[NOMEDIA]")). \
+                filter(RedditImagePost.image_url.like("%gfycat%")). \
                 limit(self._num_posts)
         if self._offset > 0:
             query = query.offset(self._offset)
@@ -395,6 +461,12 @@ class RedditNormalizeImageLocations(AutomationCommandBase):
                         else:
                             self.handle_complete_imgur_link(post)
                     # Handle redgifs
+                    if "redgifs" in url.netloc:
+                        self.handle_redgifs(post)
+                    # Handle gfy
+                    if "redgifs" in url.netloc:
+                        self.handle_gfycat(post)
+
                     if hasattr(post, 'canonical_media_urls'):
                         LOG.info(f"Canonical media link is {post.canonical_media_urls}")
                     else:
