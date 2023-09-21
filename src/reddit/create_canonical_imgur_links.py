@@ -9,8 +9,8 @@ import time
 import random
 import glob
 import difflib
-import slack_me
 from base import AutomationCommandBase, CommandParser, driver, ActionChains, By, selenium_implicit_wait_default
+import selenium
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
@@ -225,7 +225,13 @@ class RedditNormalizeImageLocations(AutomationCommandBase):
         return True
 
     def handle_redgifs(self, post):
-        driver().get(post.image_url)
+        try:
+           driver().get(post.image_url)
+        except selenium.common.exceptions.WebDriverException as e:
+            LOG.warn("I think we have a broken link; setting [NOMEDIA]: {e}")
+            post.canonical_media_urls = "[NOMEDIA]"
+            return True
+
         element_link_set = {}
 
         #TODO: this is a repeat from the above. Copy paste is the opposite of DRY.
@@ -256,6 +262,10 @@ class RedditNormalizeImageLocations(AutomationCommandBase):
         else:
             post.canonical_media_urls=",".join(element_link_set.keys())
         return True
+
+    def handle_gfycat(self, post):
+        # gfycat migrated to redgifs; so this is effectively just a redirect.
+        return self.handle_redgifs(post)
 
     def find_image(self, image, confidence=0.6, **kwargs):
         image_location = RedditNormalizeImageLocations.screenshot_targets_dir / image
@@ -438,11 +448,8 @@ class RedditNormalizeImageLocations(AutomationCommandBase):
             query = query.offset(self._offset)
         LOG.info(f"Processing results of query: {str(query)}")
         posts_to_process = query.all()
-        slack_me.post_message(f"Starting processing of {len(posts_to_process)} jobs...")
         for i in range(self._num_posts):
             LOG.info(f"Processing post {i}")
-            if i % 100 == 0:
-                slack_me.post_message(f"Picking up job {i}")
             if i + 1 >= len(posts_to_process):
                 LOG.info("Ran out of posts, we must be done!")
                 break
@@ -464,7 +471,7 @@ class RedditNormalizeImageLocations(AutomationCommandBase):
                     if "redgifs" in url.netloc:
                         self.handle_redgifs(post)
                     # Handle gfy
-                    if "redgifs" in url.netloc:
+                    if "gfycat" in url.netloc:
                         self.handle_gfycat(post)
 
                     if hasattr(post, 'canonical_media_urls'):
@@ -478,5 +485,4 @@ class RedditNormalizeImageLocations(AutomationCommandBase):
             # And save the model.
             Storage.session().commit()
 
-        slack_me.post_message(f"Processing COMPLETE!")
         return True

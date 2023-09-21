@@ -4,12 +4,19 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
+python-logging-base = {editable = true, git = "https://github.com/praecipula/python_logging_base"}
 selenium = "*"
 pyyaml = "*"
 sqlalchemy = "*"
+# There's a problem in version managing for PIL in 0.1.29
+# https://stackoverflow.com/questions/76361049/how-to-fix-typeerror-not-supported-between-instances-of-str-and-int-wh
+pyscreeze = "==0.1.28"
 pyautogui = "*"
 pillow = "*"
 opencv-python = "*"
+slack-bolt = "*"
+slack-me = {editable = true, git = "https://github.com/praecipula/slack_me"}
+pyqt6 = "*"
 
 [dev-packages]
 

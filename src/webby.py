@@ -18,6 +18,7 @@ import reddit.open_subreddit_top_all_time
 import reddit.image_post_data_storage
 import reddit.capture_all_image_urls
 import reddit.create_canonical_imgur_links
+import mouse_and_key.wanikani_to_anki
 
 CLOSE_ON_EXIT = False
 LOG = logging.getLogger(__name__)
@@ -127,6 +128,7 @@ def get_command_collection():
     cc.register_command(reddit.capture_all_image_urls.RedditCaptureAllImageUrls)
     cc.register_command(reddit.image_post_data_storage.Storage)
     cc.register_command(reddit.create_canonical_imgur_links.RedditNormalizeImageLocations)
+    cc.register_command(mouse_and_key.wanikani_to_anki.WanikaniGetVocab)
     return cc
 
 if __name__ == "__main__":
