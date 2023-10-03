@@ -4,6 +4,7 @@ import re
 import os
  
 ## SELENIUM SETUP
+import undetected_chromedriver # For websites that try to detect bots - which we, in fact, sort of are.
 from selenium import webdriver 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -16,13 +17,23 @@ opts.add_argument(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'ff_
 global _driver
 _driver = None
 selenium_implicit_wait_default = 10
-def driver():
+def driver(undetected_driver = False):
+    """
+    Get the web driver.
+    If undetected_driver is True, use the Chrome undetected_chromedriver.
+    # TODO: what Chrome profile does this use?
+    """
     global _driver
     if not _driver:
-        _driver = webdriver.Firefox(options=opts)         
-        # set implicit wait time
-        _driver.implicitly_wait(selenium_implicit_wait_default) # seconds
+        if undetected_driver:
+            _driver = undetected_chromedriver.Chrome(use_subprocess=False)
+        else:
+            _driver = webdriver.Firefox(options=opts)         
+            # set implicit wait time
+            _driver.implicitly_wait(selenium_implicit_wait_default) # seconds
     return _driver
+
+
 
 from selenium.webdriver.common.action_chains import ActionChains
 
@@ -30,7 +41,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 import python_logging_base
 from python_logging_base import ASSERT
 
-LOG = logging.getLogger("daily_start")
+LOG = logging.getLogger("base")
 LOG.setLevel(logging.TRACE)
 
 # BASE CLASSES AND FUNCTIONALITY
@@ -80,7 +91,7 @@ class AutomationCommandBase:
         else:
             elements = base_element.find_elements(By.XPATH, xpath)
         if len(elements) == 0:
-            LOG.info("We didn't find any element")
+            LOG.debug("We didn't find any element")
             return None
         return elements
 
