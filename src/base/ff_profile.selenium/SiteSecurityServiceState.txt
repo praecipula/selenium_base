@@ -1,1 +1,3 @@
-www.wanikani.com^partitionKey=%28https%2Cwanikani.com%29	0	19621	1758386378515,1,1
+aus5.mozilla.org	2	19632	1727718858502,1,0
+shavar.services.mozilla.com^firstPartyDomain=safebrowsing.86868755-6b82-4842-b301-72671a0db32e.mozilla	1	19630	1727567564953,1,1
+firefox.settings.services.mozilla.com	2	19632	1727805258683,1,0

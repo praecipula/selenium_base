@@ -140,3 +140,4 @@ credentials.yaml
 *.sqlite
 src/reddit/media
 .DS_Store
+src/base/ff_profile.selenium
