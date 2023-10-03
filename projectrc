@@ -1,2 +1,4 @@
 alias kf="killall firefox"
 #alias reddit_pages_subsitute="IFS=''; for FILE in $(ls Reddit*); do echo $FILE | sed 's/.*i.redd.it_\(.*\)jpg.*/https\:\/\/i.redd.it\/\1\jpg/g' >> files.txt ; done; unset IFS"
+
+alias cb="kf; src/webby.py cbasesearch"

@@ -17,6 +17,8 @@ opencv-python = "*"
 slack-bolt = "*"
 slack-me = {editable = true, git = "https://github.com/praecipula/slack_me"}
 pyqt6 = "*"
+undetected-chromedriver = "*"
+lxml = "*"
 
 [dev-packages]
 
